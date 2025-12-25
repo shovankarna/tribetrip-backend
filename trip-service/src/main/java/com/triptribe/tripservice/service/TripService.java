@@ -20,4 +20,13 @@ public interface TripService {
     TripMemberResponse addMember(String tripId, String userIdToAdd, TripRole role, String requesterId);
 
     void removeMember(String tripId, String userIdToRemove, String requesterId);
+
+    TripResponse updateTrip(String tripId, com.triptribe.tripservice.dto.UpdateTripRequest request, String requesterId);
+
+    void deleteTrip(String tripId, String requesterId);
+
+    TripMemberResponse updateMemberRole(String tripId, String userId, TripRole newRole, String requesterId);
+
+    TripResponse updateTripStatus(String tripId, com.triptribe.tripservice.entity.TripStatus status,
+            String requesterId);
 }

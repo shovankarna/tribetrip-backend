@@ -1,6 +1,7 @@
 package com.triptribe.tripservice.service.impl;
 
 import com.triptribe.tripservice.dto.CreateTripRequest;
+import com.triptribe.tripservice.dto.UpdateTripRequest;
 import com.triptribe.tripservice.dto.TripResponse;
 import com.triptribe.tripservice.dto.TripMemberResponse;
 import com.triptribe.tripservice.entity.Trip;
@@ -97,6 +98,7 @@ public class TripServiceImpl implements TripService {
         // We need a repo method for `findAllByTripId`.
 
         return tripMemberRepository.findByTripId(tripId).stream()
+                .filter(TripMember::isActive)
                 .map(tripMapper::toDto)
                 .toList();
     }
@@ -104,11 +106,15 @@ public class TripServiceImpl implements TripService {
     @Override
     @Transactional
     public TripMemberResponse addMember(String tripId, String userIdToAdd, TripRole role, String requesterId) {
-        // Validation: Requester must be active OWNER
+        // Validation: Requester must be active OWNER or ADMIN
         TripMember requester = requireActiveMembership(tripId, requesterId);
 
-        if (requester.getRole() != TripRole.OWNER) {
-            throw new UnauthorizedException("Only active OWNER can add members");
+        if (requester.getRole() != TripRole.OWNER && requester.getRole() != TripRole.ADMIN) {
+            throw new UnauthorizedException("Only OWNER or ADMIN can add members");
+        }
+
+        if (requester.getRole() == TripRole.ADMIN && role == TripRole.ADMIN) {
+            throw new UnauthorizedException("Admins cannot add other Admins. Only Owner can make someone Admin.");
         }
 
         // Prevent assigning OWNER role directly
@@ -117,9 +123,10 @@ public class TripServiceImpl implements TripService {
         }
 
         // Validate trip exists
-        if (!tripRepository.existsById(tripId)) {
-            throw new ResourceNotFoundException("Trip not found");
-        }
+        Trip trip = tripRepository.findById(tripId)
+                .orElseThrow(() -> new ResourceNotFoundException("Trip not found"));
+
+        validateTripAction(trip, ActionType.ADD_MEMBER);
 
         // Check if user is already a member
         Optional<TripMember> existingMemberOpt = tripMemberRepository.findByTripIdAndUserId(tripId, userIdToAdd);
@@ -151,26 +158,65 @@ public class TripServiceImpl implements TripService {
         TripMember requester = requireActiveMembership(tripId, requesterId);
 
         // Logic:
-        // OWNER can remove others.
+        // OWNER can remove anyone (except self).
+        // ADMIN can remove MEMBER.
         // MEMBER can remove themselves (Leave trip).
 
-        boolean isOwner = requester.getRole() == TripRole.OWNER;
         boolean isSelfRemoval = userIdToRemove.equals(requesterId);
+        boolean isOwner = requester.getRole() == TripRole.OWNER;
+        boolean isAdmin = requester.getRole() == TripRole.ADMIN;
 
-        if (!isOwner && !isSelfRemoval) {
-            throw new UnauthorizedException("Only OWNER can remove other members");
-        }
-
-        if (isOwner && isSelfRemoval) {
-            throw new IllegalArgumentException("Owner cannot remove themselves. Transfer ownership first.");
+        if (isSelfRemoval) {
+            if (isOwner) {
+                throw new IllegalArgumentException("Owner cannot remove themselves. Transfer ownership first.");
+            }
+            // Allow self removal for others
+        } else {
+            // Removing someone else
+            if (isOwner) {
+                // Owner can remove anyone
+            } else if (isAdmin) {
+                // Admin can remove ONLY Members (not Admins or Owner)
+                TripMember memberToRemove = tripMemberRepository.findByTripIdAndUserId(tripId, userIdToRemove)
+                        .orElseThrow(() -> new ResourceNotFoundException("Member not found"));
+                if (memberToRemove.getRole() == TripRole.OWNER || memberToRemove.getRole() == TripRole.ADMIN) {
+                    throw new UnauthorizedException("Admin cannot remove Owner or other Admins");
+                }
+            } else {
+                throw new UnauthorizedException("Only OWNER or ADMIN can remove other members");
+            }
         }
 
         TripMember memberToRemove = tripMemberRepository.findByTripIdAndUserId(tripId, userIdToRemove)
                 .orElseThrow(() -> new ResourceNotFoundException("Member not found"));
 
         if (!memberToRemove.isActive()) {
-            throw new ResourceNotFoundException("Member is already inactive");
+            // Already inactive - idempotent success
+            return;
         }
+
+        // Validate Lifecycle
+        Trip trip = tripRepository.findById(tripId)
+                .orElseThrow(() -> new ResourceNotFoundException("Trip not found"));
+        // Allow exiting a trip by self always? Or apply logic?
+        // Logic says: "Member removal: Restricted in ONGOING/COMPLETED/CANCELLED".
+        // But "Leave Trip" might be different.
+        // Table says: Members [CONFIRMED: Add only, ONGOING: X, COMPLETED: X,
+        // CANCELLED: X].
+        // So effectively, once CONFIRMED, you cannot be removed or leave?
+        // Realism: If I am CONFIRMED, I can leave (cancel my spot).
+        // But User Request says: "ONGOING: Member removal ❌".
+        // "CONFIRMED: Members ⚠️ Add only".
+        // This implies NO removal in CONFIRMED.
+        // I will strictly likely follow the table.
+        // "CONFIRMED | Members | ⚠️ Add only" -> implies Remove is blocked.
+        // However, self-leaving might be an exception or deemed "Cancellation" of
+        // participation.
+        // For now, I will STRICTLY BLOCK it as per "Add Only" and "Admin/Owner removal"
+        // logic.
+        // If users get stuck, we can relax it later.
+
+        validateTripAction(trip, ActionType.REMOVE_MEMBER);
 
         memberToRemove.setActive(false);
         tripMemberRepository.save(memberToRemove);
@@ -185,5 +231,176 @@ public class TripServiceImpl implements TripService {
             throw new UnauthorizedException("Inactive member");
         }
         return member;
+    }
+
+    @Override
+    @Transactional
+    public TripMemberResponse updateMemberRole(String tripId, String userId, TripRole newRole, String requesterId) {
+        TripMember requester = requireActiveMembership(tripId, requesterId);
+
+        // Only OWNER can change roles (promote/demote admins)
+        if (requester.getRole() != TripRole.OWNER) {
+            throw new UnauthorizedException("Only OWNER can change member roles");
+        }
+
+        if (newRole == TripRole.OWNER) {
+            throw new IllegalArgumentException(
+                    "Cannot assign OWNER role via update. Use transfer ownership (not implemented yet).");
+        }
+
+        TripMember memberToUpdate = tripMemberRepository.findByTripIdAndUserId(tripId, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Member not found"));
+
+        if (memberToUpdate.getUserId().equals(requesterId)) {
+            throw new IllegalArgumentException("Owner cannot change their own role");
+        }
+
+        Trip trip = tripRepository.findById(tripId)
+                .orElseThrow(() -> new ResourceNotFoundException("Trip not found"));
+        validateTripAction(trip, ActionType.CHANGE_ROLE);
+
+        memberToUpdate.setRole(newRole);
+        return tripMapper.toDto(tripMemberRepository.save(memberToUpdate));
+    }
+
+    @Override
+    @Transactional
+    public TripResponse updateTripStatus(String tripId, TripStatus status, String requesterId) {
+        Trip trip = tripRepository.findById(tripId)
+                .orElseThrow(() -> new ResourceNotFoundException("Trip not found"));
+
+        TripMember requester = requireActiveMembership(tripId, requesterId);
+
+        // OWNER or ADMIN can update status
+        if (requester.getRole() != TripRole.OWNER && requester.getRole() != TripRole.ADMIN) {
+            throw new UnauthorizedException("Only OWNER or ADMIN can update trip status");
+        }
+
+        // Check if status change is allowed
+        // Table: COMPLETED/CANCELLED -> Status Change ❌
+        if (trip.getStatus() == TripStatus.COMPLETED || trip.getStatus() == TripStatus.CANCELLED) {
+            throw new IllegalArgumentException("Cannot change status of a " + trip.getStatus() + " trip.");
+        }
+
+        // Also verify target status transitions if needed, but for now just source
+        // check.
+        // Validate if OWNER is allowed to (already checked role).
+
+        trip.setStatus(status);
+        return tripMapper.toDto(tripRepository.save(trip), requester.getRole());
+    }
+
+    @Override
+    @Transactional
+    public TripResponse updateTrip(String tripId, UpdateTripRequest request, String requesterId) {
+        // Validation: Required fields check can be done here or via @Valid in
+        // Controller
+        if (request.getStartDate() != null && request.getEndDate() != null
+                && request.getEndDate().isBefore(request.getStartDate())) {
+            throw new IllegalArgumentException("End date cannot be before start date");
+        }
+
+        Trip trip = tripRepository.findById(tripId)
+                .orElseThrow(() -> new ResourceNotFoundException("Trip not found"));
+
+        // Authorization: Requester must be OWNER
+        TripMember requester = requireActiveMembership(tripId, requesterId);
+        if (requester.getRole() != TripRole.OWNER) {
+            throw new UnauthorizedException("Only OWNER can update the trip");
+        }
+
+        validateTripAction(trip, ActionType.MODIFY_DETAILS);
+
+        if (request.getName() != null)
+            trip.setName(request.getName());
+        if (request.getDescription() != null)
+            trip.setDescription(request.getDescription());
+        if (request.getDestination() != null)
+            trip.setDestination(request.getDestination());
+        if (request.getStartDate() != null)
+            trip.setStartDate(request.getStartDate());
+        if (request.getEndDate() != null)
+            trip.setEndDate(request.getEndDate());
+
+        return tripMapper.toDto(tripRepository.save(trip), TripRole.OWNER);
+    }
+
+    @Override
+    @Transactional
+    public void deleteTrip(String tripId, String requesterId) {
+        Trip trip = tripRepository.findById(tripId)
+                .orElseThrow(() -> new ResourceNotFoundException("Trip not found"));
+
+        if (!trip.isActive()) {
+            throw new ResourceNotFoundException("Trip is already deleted");
+        }
+
+        // Authorization: Requester must be OWNER
+        TripMember requester = requireActiveMembership(tripId, requesterId);
+        if (requester.getRole() != TripRole.OWNER) {
+            throw new UnauthorizedException("Only OWNER can delete the trip");
+        }
+
+        // Soft delete trip
+        trip.setActive(false);
+        tripRepository.save(trip);
+
+        // Optionally soft delete all members?
+        // Logic usually implies if trip is inactive, members are implicitly inactive
+        // contextually.
+        // But let's set them to inactive to be clean.
+        List<TripMember> members = tripMemberRepository.findByTripId(tripId);
+        members.forEach(m -> m.setActive(false));
+        tripMemberRepository.saveAll(members);
+    }
+
+    private enum ActionType {
+        MODIFY_DETAILS,
+        ADD_MEMBER,
+        REMOVE_MEMBER,
+        CHANGE_ROLE
+    }
+
+    private void validateTripAction(Trip trip, ActionType action) {
+        TripStatus status = trip.getStatus();
+
+        switch (status) {
+            case DRAFT:
+            case PLANNING:
+                // All actions allowed
+                break;
+
+            case CONFIRMED:
+                if (action == ActionType.MODIFY_DETAILS) {
+                    throw new IllegalArgumentException("Cannot modify trip details in CONFIRMED status.");
+                }
+                if (action == ActionType.REMOVE_MEMBER) {
+                    throw new IllegalArgumentException("Cannot remove members in CONFIRMED status.");
+                }
+                if (action == ActionType.CHANGE_ROLE) {
+                    throw new IllegalArgumentException("Cannot change roles in CONFIRMED status.");
+                }
+                // ADD_MEMBER allowed
+                break;
+
+            case ONGOING:
+                if (action == ActionType.MODIFY_DETAILS) {
+                    throw new IllegalArgumentException("Cannot modify trip details in ONGOING status.");
+                }
+                if (action == ActionType.ADD_MEMBER) {
+                    throw new IllegalArgumentException("Cannot add members in ONGOING status.");
+                }
+                if (action == ActionType.REMOVE_MEMBER) {
+                    throw new IllegalArgumentException("Cannot remove members in ONGOING status.");
+                }
+                if (action == ActionType.CHANGE_ROLE) {
+                    throw new IllegalArgumentException("Cannot change roles in ONGOING status.");
+                }
+                break;
+
+            case COMPLETED:
+            case CANCELLED:
+                throw new IllegalArgumentException("Cannot perform " + action + " on a " + status + " trip.");
+        }
     }
 }

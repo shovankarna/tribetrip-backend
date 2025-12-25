@@ -2,7 +2,9 @@ package com.triptribe.tripservice.entity;
 
 public enum TripStatus {
     DRAFT,
-    ACTIVE,
+    PLANNING,
+    CONFIRMED,
+    ONGOING,
     COMPLETED,
     CANCELLED
 }
