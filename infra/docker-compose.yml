@@ -81,6 +81,23 @@ services:
       - postgres
       - keycloak
 
+  itinerary-service:
+    build:
+      context: ../itinerary-service
+      dockerfile: Dockerfile
+    container_name: trip_itinerary_service
+    restart: unless-stopped
+    environment:
+      SPRING_DATASOURCE_URL: ${ITINERARY_DB_URL}
+      SPRING_DATASOURCE_USERNAME: ${ITINERARY_DB_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${ITINERARY_DB_PASSWORD}
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+    ports:
+      - "${ITINERARY_SERVICE_PORT}:8083"
+    depends_on:
+      - postgres
+      - keycloak
+
   user-service:
     build:
       context: ../user-service
