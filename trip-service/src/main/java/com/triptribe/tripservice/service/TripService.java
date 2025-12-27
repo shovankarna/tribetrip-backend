@@ -4,6 +4,7 @@ import com.triptribe.tripservice.dto.CreateTripRequest;
 import com.triptribe.tripservice.dto.TripMemberResponse;
 import com.triptribe.tripservice.dto.TripResponse;
 import com.triptribe.tripservice.entity.TripRole;
+import com.triptribe.tripservice.dto.internal.TripPermissionResponse;
 
 import java.util.List;
 
@@ -29,4 +30,6 @@ public interface TripService {
 
     TripResponse updateTripStatus(String tripId, com.triptribe.tripservice.entity.TripStatus status,
             String requesterId);
+
+    TripPermissionResponse getTripPermission(String tripId, String userId);
 }

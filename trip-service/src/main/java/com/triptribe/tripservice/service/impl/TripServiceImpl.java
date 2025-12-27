@@ -14,6 +14,7 @@ import com.triptribe.tripservice.mapper.TripMapper;
 import com.triptribe.tripservice.repository.TripMemberRepository;
 import com.triptribe.tripservice.repository.TripRepository;
 import com.triptribe.tripservice.service.TripService;
+import com.triptribe.tripservice.dto.internal.TripPermissionResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -402,5 +403,23 @@ public class TripServiceImpl implements TripService {
             case CANCELLED:
                 throw new IllegalArgumentException("Cannot perform " + action + " on a " + status + " trip.");
         }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public TripPermissionResponse getTripPermission(String tripId, String userId) {
+        Trip trip = tripRepository.findById(tripId)
+                .orElseThrow(() -> new ResourceNotFoundException("Trip not found"));
+
+        TripMember member = tripMemberRepository.findByTripIdAndUserId(tripId, userId)
+                .filter(TripMember::isActive)
+                .orElseThrow(() -> new UnauthorizedException("User is not an active member of this trip"));
+
+        return TripPermissionResponse.builder()
+                .tripId(trip.getId())
+                .role(member.getRole())
+                .status(trip.getStatus())
+                .startDate(trip.getStartDate())
+                .build();
     }
 }
