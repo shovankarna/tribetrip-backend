@@ -79,6 +79,12 @@ public class ItineraryTemplateServiceImpl implements ItineraryTemplateService {
         }
 
         ItineraryTemplateItem item = mapper.toEntity(request, template);
+
+        if (item.getOrderIndex() == null) {
+            Integer maxOrder = itemRepository.findMaxOrderIndex(template.getId());
+            item.setOrderIndex(maxOrder != null ? maxOrder + 1 : 0);
+        }
+
         return mapper.toDto(itemRepository.save(item));
     }
 
@@ -133,6 +139,19 @@ public class ItineraryTemplateServiceImpl implements ItineraryTemplateService {
         }
 
         itemRepository.delete(item);
+    }
+
+    @Override
+    @Transactional
+    public ItineraryTemplateResponse publishTemplate(UUID templateId, String userId) {
+        ItineraryTemplate template = validateOwner(templateId, userId);
+
+        if (template.getStatus() == TemplateStatus.ARCHIVED) {
+            throw new IllegalArgumentException("Cannot publish archived template");
+        }
+
+        template.setStatus(TemplateStatus.ACTIVE);
+        return mapper.toDto(templateRepository.save(template));
     }
 
     @Override

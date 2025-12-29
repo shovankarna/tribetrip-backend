@@ -22,6 +22,8 @@ public interface ItineraryTemplateService {
 
     void archiveTemplate(UUID templateId, String userId);
 
+    ItineraryTemplateResponse publishTemplate(UUID templateId, String userId);
+
     // Additional methods for attach readiness?
     void validateTemplateForAttach(UUID templateId);
 }

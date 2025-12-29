@@ -47,6 +47,12 @@ public class ItineraryTemplateController {
         templateService.archiveTemplate(templateId, userContext.getUserId());
     }
 
+    @PostMapping("/{templateId}/publish")
+    @ResponseStatus(HttpStatus.OK)
+    public ItineraryTemplateResponse publishTemplate(@PathVariable UUID templateId) {
+        return templateService.publishTemplate(templateId, userContext.getUserId());
+    }
+
     // --- Items ---
 
     @PostMapping("/{templateId}/items")
@@ -54,5 +60,21 @@ public class ItineraryTemplateController {
             @PathVariable UUID templateId,
             @RequestBody CreateTemplateItemRequest request) {
         return templateService.addItem(templateId, request, userContext.getUserId());
+    }
+
+    @PutMapping("/{templateId}/items/{itemId}")
+    public ItineraryTemplateItemResponse updateItem(
+            @PathVariable UUID templateId,
+            @PathVariable UUID itemId,
+            @RequestBody UpdateTemplateItemRequest request) {
+        return templateService.updateItem(itemId, request, userContext.getUserId());
+    }
+
+    @DeleteMapping("/{templateId}/items/{itemId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteItem(
+            @PathVariable UUID templateId,
+            @PathVariable UUID itemId) {
+        templateService.deleteItem(itemId, userContext.getUserId());
     }
 }

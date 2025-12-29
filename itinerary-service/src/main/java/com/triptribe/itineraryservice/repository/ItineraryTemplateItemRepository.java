@@ -8,4 +8,6 @@ import java.util.UUID;
 
 @Repository
 public interface ItineraryTemplateItemRepository extends JpaRepository<ItineraryTemplateItem, UUID> {
+    @org.springframework.data.jpa.repository.Query("SELECT MAX(i.orderIndex) FROM ItineraryTemplateItem i WHERE i.template.id = :templateId")
+    Integer findMaxOrderIndex(@org.springframework.data.repository.query.Param("templateId") UUID templateId);
 }

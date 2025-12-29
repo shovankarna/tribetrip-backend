@@ -19,7 +19,7 @@ public class TripItineraryController {
     private final TripItineraryService itineraryService;
     private final UserContext userContext;
 
-    @PostMapping("/api/trips/{tripId}/itineraries/{templateId}/attach")
+    @PostMapping("/api/itineraries/trips/{tripId}/attach/{templateId}")
     @ResponseStatus(HttpStatus.CREATED)
     public void attachTemplate(
             @PathVariable String tripId,
@@ -27,13 +27,13 @@ public class TripItineraryController {
         itineraryService.attachTemplate(tripId, templateId, userContext.getUserId());
     }
 
-    @GetMapping("/api/trips/{tripId}/itinerary")
+    @GetMapping("/api/itineraries/trips/{tripId}")
     public TripItineraryResponse getTripItinerary(@PathVariable String tripId) {
         return itineraryService.getTripItinerary(tripId, userContext.getUserId());
     }
 
     // Add item directly to trip itinerary
-    @PostMapping("/api/trips/{tripId}/itinerary/items")
+    @PostMapping("/api/itineraries/trips/{tripId}/items")
     @ResponseStatus(HttpStatus.CREATED)
     public TripItineraryItemResponse addItem(
             @PathVariable String tripId,
@@ -43,14 +43,14 @@ public class TripItineraryController {
 
     // --- Direct Item Operations ---
 
-    @PutMapping("/api/trip-itinerary-items/{itemId}")
+    @PutMapping("/api/itineraries/trip-items/{itemId}")
     public TripItineraryItemResponse updateItem(
             @PathVariable UUID itemId,
             @RequestBody UpdateTripItineraryItemRequest request) {
         return itineraryService.updateItem(itemId, request, userContext.getUserId());
     }
 
-    @DeleteMapping("/api/trip-itinerary-items/{itemId}")
+    @DeleteMapping("/api/itineraries/trip-items/{itemId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteItem(@PathVariable UUID itemId) {
         itineraryService.deleteItem(itemId, userContext.getUserId());
