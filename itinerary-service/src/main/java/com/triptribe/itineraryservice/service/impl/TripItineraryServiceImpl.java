@@ -144,6 +144,8 @@ public class TripItineraryServiceImpl implements TripItineraryService {
             item.setOrderIndex(request.getOrderIndex());
         if (request.getIsUnscheduled() != null)
             item.setUnscheduled(request.getIsUnscheduled());
+        if (request.getCompleted() != null)
+            item.setCompleted(request.getCompleted());
 
         if (item.isUnscheduled()) {
             item.setDate(null);
@@ -173,5 +175,6 @@ public class TripItineraryServiceImpl implements TripItineraryService {
         if (status == TripStatus.COMPLETED || status == TripStatus.CANCELLED) {
             throw new IllegalArgumentException("Cannot modify itinerary of a COMPLETED or CANCELLED trip");
         }
+        // Implicitly allows ONGOING, CONFIRMED, PLANNING, DRAFT
     }
 }

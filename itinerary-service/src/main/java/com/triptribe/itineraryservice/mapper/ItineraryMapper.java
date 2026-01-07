@@ -104,6 +104,7 @@ public class ItineraryMapper {
         dto.setNotes(item.getNotes());
         dto.setOrderIndex(item.getOrderIndex());
         dto.setUnscheduled(item.isUnscheduled());
+        dto.setCompleted(item.isCompleted());
         return dto;
     }
 

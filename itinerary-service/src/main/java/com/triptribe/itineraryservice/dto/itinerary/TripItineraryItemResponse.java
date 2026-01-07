@@ -17,4 +17,5 @@ public class TripItineraryItemResponse {
     private String notes;
     private Integer orderIndex;
     private boolean isUnscheduled;
+    private boolean completed;
 }

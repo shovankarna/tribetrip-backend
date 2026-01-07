@@ -379,7 +379,7 @@ public class TripServiceImpl implements TripService {
                     throw new IllegalArgumentException("Cannot remove members in CONFIRMED status.");
                 }
                 if (action == ActionType.CHANGE_ROLE) {
-                    throw new IllegalArgumentException("Cannot change roles in CONFIRMED status.");
+                    // Allow role changes in CONFIRMED status (for Owner/Admin to manage team)
                 }
                 // ADD_MEMBER allowed
                 break;
@@ -395,7 +395,7 @@ public class TripServiceImpl implements TripService {
                     throw new IllegalArgumentException("Cannot remove members in ONGOING status.");
                 }
                 if (action == ActionType.CHANGE_ROLE) {
-                    throw new IllegalArgumentException("Cannot change roles in ONGOING status.");
+                    // Allow role changes in ONGOING status
                 }
                 break;
 

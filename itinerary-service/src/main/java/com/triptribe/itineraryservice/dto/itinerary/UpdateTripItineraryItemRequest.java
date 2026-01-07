@@ -15,4 +15,5 @@ public class UpdateTripItineraryItemRequest {
     private String notes;
     private Integer orderIndex;
     private Boolean isUnscheduled;
+    private Boolean completed;
 }

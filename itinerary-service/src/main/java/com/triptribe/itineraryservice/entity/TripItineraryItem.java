@@ -49,6 +49,9 @@ public class TripItineraryItem {
     @Column(name = "is_unscheduled", nullable = false)
     private boolean isUnscheduled = false;
 
+    @Column(nullable = false)
+    private boolean completed = false;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
