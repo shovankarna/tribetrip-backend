@@ -171,6 +171,79 @@ public class TripItineraryServiceImpl implements TripItineraryService {
         itemRepository.delete(item);
     }
 
+    @Override
+    @Transactional
+    public void moveItem(String tripId, UUID itemId, MoveTripItineraryItemRequest request, String userId) {
+        TripPermissionResponse permission = tripServiceClient.getTripPermissions(tripId, userId);
+
+        if (permission.getRole() != TripRole.OWNER && permission.getRole() != TripRole.ADMIN) {
+            throw new UnauthorizedException("Only OWNER or ADMIN can move items");
+        }
+        validateTripStatusForModification(permission.getStatus());
+
+        TripItineraryItem item = itemRepository.findById(itemId)
+                .orElseThrow(() -> new ResourceNotFoundException("Item not found"));
+
+        if (!item.getTripItinerary().getTripId().equals(tripId)) {
+            throw new IllegalArgumentException("Item does not belong to the specified trip");
+        }
+
+        // Logs for debugging
+        System.out.println("Moving item: " + itemId + " to date: " + request.getNewDate() + ", index: "
+                + request.getNewOrderIndex());
+
+        // Apply Update
+        LocalDate oldDate = item.getDate();
+        LocalDate targetDate = request.getNewDate() != null ? request.getNewDate() : oldDate;
+        Integer targetIndex = request.getNewOrderIndex();
+
+        if (targetIndex != null) {
+            // Re-indexing logic for the TARGET day
+            // Fetch all items for the target date belonging to this itinerary
+            // Note: If dateChanged is false, we are reordering in same day. item is still
+            // in DB with old values.
+
+            // We need to fetch items excluding the one we are moving (if it's already in
+            // that day)
+            // But simplistic approach: Fetch all, remove our item if present, insert at new
+            // index, save all.
+            java.util.List<TripItineraryItem> dayItems = itemRepository.findAll().stream()
+                    .filter(i -> i.getTripItinerary().getId().equals(item.getTripItinerary().getId()))
+                    .filter(i -> targetDate.equals(i.getDate()))
+                    .filter(i -> !i.getId().equals(item.getId())) // Exclude self
+                    .sorted(java.util.Comparator.comparingInt(TripItineraryItem::getOrderIndex))
+                    .collect(java.util.stream.Collectors.toList());
+
+            if (targetIndex < 0)
+                targetIndex = 0;
+            if (targetIndex > dayItems.size())
+                targetIndex = dayItems.size();
+
+            // Re-map the moving item
+            item.setDate(targetDate);
+            item.setOrderIndex(targetIndex);
+            item.setUnscheduled(false);
+
+            // Insert into list to recalc indices
+            dayItems.add(targetIndex, item);
+
+            // Update indices
+            for (int i = 0; i < dayItems.size(); i++) {
+                dayItems.get(i).setOrderIndex(i);
+            }
+
+            itemRepository.saveAll(dayItems);
+        } else {
+            // Just update date if no index provided (append to end? or keep index?)
+            // Fallback to simple update
+            if (request.getNewDate() != null) {
+                item.setDate(request.getNewDate());
+                item.setUnscheduled(false);
+            }
+            itemRepository.save(item);
+        }
+    }
+
     private void validateTripStatusForModification(TripStatus status) {
         if (status == TripStatus.COMPLETED || status == TripStatus.CANCELLED) {
             throw new IllegalArgumentException("Cannot modify itinerary of a COMPLETED or CANCELLED trip");

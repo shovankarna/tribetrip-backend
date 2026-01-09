@@ -13,5 +13,7 @@ public interface TripItineraryService {
 
     TripItineraryItemResponse updateItem(UUID itemId, UpdateTripItineraryItemRequest request, String userId);
 
+    void moveItem(String tripId, UUID itemId, MoveTripItineraryItemRequest request, String userId);
+
     void deleteItem(UUID itemId, String userId);
 }

@@ -55,4 +55,12 @@ public class TripItineraryController {
     public void deleteItem(@PathVariable UUID itemId) {
         itineraryService.deleteItem(itemId, userContext.getUserId());
     }
+
+    @PutMapping("/api/itineraries/trips/{tripId}/items/{itemId}/move")
+    public void moveItem(
+            @PathVariable String tripId,
+            @PathVariable UUID itemId,
+            @RequestBody com.triptribe.itineraryservice.dto.itinerary.MoveTripItineraryItemRequest request) {
+        itineraryService.moveItem(tripId, itemId, request, userContext.getUserId());
+    }
 }

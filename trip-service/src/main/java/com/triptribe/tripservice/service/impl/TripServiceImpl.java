@@ -372,9 +372,7 @@ public class TripServiceImpl implements TripService {
                 break;
 
             case CONFIRMED:
-                if (action == ActionType.MODIFY_DETAILS) {
-                    throw new IllegalArgumentException("Cannot modify trip details in CONFIRMED status.");
-                }
+                // MODIFY_DETAILS allowed now
                 if (action == ActionType.REMOVE_MEMBER) {
                     throw new IllegalArgumentException("Cannot remove members in CONFIRMED status.");
                 }
@@ -385,9 +383,7 @@ public class TripServiceImpl implements TripService {
                 break;
 
             case ONGOING:
-                if (action == ActionType.MODIFY_DETAILS) {
-                    throw new IllegalArgumentException("Cannot modify trip details in ONGOING status.");
-                }
+                // MODIFY_DETAILS allowed now
                 if (action == ActionType.ADD_MEMBER) {
                     throw new IllegalArgumentException("Cannot add members in ONGOING status.");
                 }
