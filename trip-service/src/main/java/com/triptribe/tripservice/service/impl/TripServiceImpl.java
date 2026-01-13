@@ -14,6 +14,7 @@ import com.triptribe.tripservice.mapper.TripMapper;
 import com.triptribe.tripservice.repository.TripMemberRepository;
 import com.triptribe.tripservice.repository.TripRepository;
 import com.triptribe.tripservice.service.TripService;
+import com.triptribe.tripservice.client.UserServiceClient;
 import com.triptribe.tripservice.dto.internal.TripPermissionResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -29,6 +30,7 @@ public class TripServiceImpl implements TripService {
     private final TripRepository tripRepository;
     private final TripMemberRepository tripMemberRepository;
     private final TripMapper tripMapper;
+    private final UserServiceClient userServiceClient;
 
     @Override
     @Transactional
@@ -128,6 +130,11 @@ public class TripServiceImpl implements TripService {
                 .orElseThrow(() -> new ResourceNotFoundException("Trip not found"));
 
         validateTripAction(trip, ActionType.ADD_MEMBER);
+
+        // Validate user exists in User Service
+        if (!userServiceClient.isValidUser(userIdToAdd)) {
+            throw new ResourceNotFoundException("User not found with ID: " + userIdToAdd);
+        }
 
         // Check if user is already a member
         Optional<TripMember> existingMemberOpt = tripMemberRepository.findByTripIdAndUserId(tripId, userIdToAdd);

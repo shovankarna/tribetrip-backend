@@ -1,6 +1,8 @@
 package com.triptribe.userservice.service;
 
 import com.triptribe.userservice.entity.UserProfile;
+
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -40,4 +42,12 @@ public interface UserProfileService {
      * @throws RuntimeException if the user is not found.
      */
     UserProfile updateProfile(String userId, UserProfile updatedProfile);
+
+    /**
+     * Retrieves a list of user profiles for the given list of IDs.
+     *
+     * @param userIds List of user IDs.
+     * @return List of UserProfile objects.
+     */
+    List<UserProfile> getUsers(List<String> userIds);
 }

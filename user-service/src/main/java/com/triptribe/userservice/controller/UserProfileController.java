@@ -1,5 +1,6 @@
 package com.triptribe.userservice.controller;
 
+import com.triptribe.userservice.dto.BatchUserRequest;
 import com.triptribe.userservice.dto.UserProfileDTO;
 import com.triptribe.userservice.config.UserContext;
 import com.triptribe.userservice.entity.UserProfile;
@@ -10,10 +11,14 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import lombok.RequiredArgsConstructor;
+
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/user")
@@ -61,5 +66,14 @@ public class UserProfileController {
         UserProfile updatedProfile = userProfileMapper.toEntity(updatedProfileDTO);
         UserProfile savedProfile = userProfileService.updateProfile(userId, updatedProfile);
         return userProfileMapper.toDTO(savedProfile);
+    }
+
+    @PostMapping("/batch")
+    public List<UserProfileDTO> getUsersBatch(
+            @RequestBody BatchUserRequest request) {
+        return userProfileService.getUsers(request.getIds())
+                .stream()
+                .map(userProfileMapper::toDTO)
+                .collect(Collectors.toList());
     }
 }
