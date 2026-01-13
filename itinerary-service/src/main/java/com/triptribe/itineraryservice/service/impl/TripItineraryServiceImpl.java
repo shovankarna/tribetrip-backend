@@ -106,7 +106,12 @@ public class TripItineraryServiceImpl implements TripItineraryService {
         validateTripStatusForModification(permission.getStatus());
 
         TripItinerary itinerary = tripItineraryRepository.findByTripId(tripId)
-                .orElseThrow(() -> new ResourceNotFoundException("No itinerary attached"));
+                .orElseGet(() -> {
+                    TripItinerary newItinerary = new TripItinerary();
+                    newItinerary.setTripId(tripId);
+                    newItinerary.setCreatedByUserId(userId);
+                    return tripItineraryRepository.save(newItinerary);
+                });
 
         TripItineraryItem item = mapper.toEntity(request, itinerary);
         return mapper.toDto(itemRepository.save(item));
