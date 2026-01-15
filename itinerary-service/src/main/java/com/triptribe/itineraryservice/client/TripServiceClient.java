@@ -3,6 +3,7 @@ package com.triptribe.itineraryservice.client;
 import com.triptribe.itineraryservice.dto.internal.TripPermissionResponse;
 import com.triptribe.itineraryservice.exception.ResourceNotFoundException;
 import com.triptribe.itineraryservice.exception.UnauthorizedException;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
@@ -10,11 +11,10 @@ import org.springframework.web.client.RestClient;
 public class TripServiceClient {
 
     private final RestClient restClient;
-    // Hardcoded URL for MVP. In real app, use service discovery or properties.
-    private static final String TRIP_SERVICE_URL = "http://trip-service:8082";
 
-    public TripServiceClient(RestClient.Builder restClientBuilder) {
-        this.restClient = restClientBuilder.baseUrl(TRIP_SERVICE_URL).build();
+    public TripServiceClient(RestClient.Builder restClientBuilder,
+            @Value("${spring.config.trip-service.url}") String tripServiceUrl) {
+        this.restClient = restClientBuilder.baseUrl(tripServiceUrl).build();
     }
 
     public TripPermissionResponse getTripPermissions(String tripId, String userId) {

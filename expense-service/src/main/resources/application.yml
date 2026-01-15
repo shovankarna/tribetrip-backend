@@ -4,6 +4,11 @@ server:
 spring:
   application:
     name: expense-service
+  
+  # Application Specific Configuration
+  config:
+    trip-service:
+      url: ${TRIP_SERVICE_URL:http://trip-service:8082}
   datasource:
     url: jdbc:postgresql://postgres:5432/expensedb
     username: ${POSTGRES_USER:tripuser}

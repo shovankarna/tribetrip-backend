@@ -16,7 +16,7 @@ public class TripServiceClient {
 
     private final RestTemplate restTemplate = new RestTemplate();
 
-    @Value("${application.trip-service.url:http://trip-service:8082}")
+    @Value("${spring.config.trip-service.url}")
     private String tripServiceUrl;
 
     public void validateTripAndMember(String tripId, String userId) {

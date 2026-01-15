@@ -1,5 +1,6 @@
 package com.triptribe.tripservice.client;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
@@ -7,11 +8,10 @@ import org.springframework.web.client.RestClient;
 public class UserServiceClient {
 
     private final RestClient restClient;
-    // Hardcoded URL for MVP. In real app, use service discovery or properties.
-    private static final String USER_SERVICE_URL = "http://user-service:8081";
 
-    public UserServiceClient(RestClient.Builder restClientBuilder) {
-        this.restClient = restClientBuilder.baseUrl(USER_SERVICE_URL).build();
+    public UserServiceClient(RestClient.Builder restClientBuilder,
+            @Value("${spring.config.user-service.url}") String userServiceUrl) {
+        this.restClient = restClientBuilder.baseUrl(userServiceUrl).build();
     }
 
     /**

@@ -4,6 +4,11 @@ server:
 spring:
   application:
     name: trip-service
+  
+  # Application Specific Configuration
+  config:
+    user-service:
+      url: ${USER_SERVICE_URL:http://user-service:8081}
   datasource:
     url: jdbc:postgresql://localhost:5432/tripdb
     username: tripuser
