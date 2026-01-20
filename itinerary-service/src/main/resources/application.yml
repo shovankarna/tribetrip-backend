@@ -26,3 +26,8 @@ spring:
 logging:
   level:
     com.triptribe: DEBUG
+
+# Gemini AI Configuration
+gemini:
+  api:
+    key: ${GEMINI_API_KEY}

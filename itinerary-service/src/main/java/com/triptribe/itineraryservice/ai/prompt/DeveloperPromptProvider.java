@@ -1,0 +1,52 @@
+package com.triptribe.itineraryservice.ai.prompt;
+
+import com.triptribe.itineraryservice.ai.dto.AiItineraryRequest;
+import com.triptribe.itineraryservice.ai.dto.AiRefinementRequest;
+import org.springframework.stereotype.Component;
+
+@Component
+public class DeveloperPromptProvider {
+
+    public String createGenerationPrompt(AiItineraryRequest request) {
+        return String.format("""
+                Generate a %d-day %s itinerary for a %s group of %d people to %s.
+
+                Constraints:
+                - Start Date: %s
+                - Budget: %s
+                - Pace: %s
+                - Trip Type: %s
+
+                Please provide a day-by-day plan including suggested activities, locations, and approximate timings.
+                Ensure the activities match the %s pace and %s budget.
+                """,
+                request.getDurationDays(),
+                request.getTripType(),
+                request.getGroupType(),
+                request.getNumberOfPeople(),
+                request.getDestination(),
+                request.getStartDate(),
+                request.getBudgetType(),
+                request.getPace(),
+                request.getTripType(),
+                request.getPace(),
+                request.getBudgetType());
+    }
+
+    public String createRefinementPrompt(String currentItineraryJson, AiRefinementRequest request) {
+        return String.format("""
+                Based on the following existing itinerary:
+                %s
+
+                Please MODIFY this itinerary according to the following instruction:
+                Refinement Type: %s
+                Value: %s
+
+                Return the FULL updated JSON structure with the changes applied.
+                Do not change parts of the itinerary that are not affected by this refinement.
+                """,
+                currentItineraryJson,
+                request.getRefinementType(),
+                request.getValue());
+    }
+}
