@@ -53,6 +53,12 @@ public class ItineraryTemplateController {
         return templateService.publishTemplate(templateId, userContext.getUserId());
     }
 
+    @DeleteMapping("/{templateId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteTemplate(@PathVariable UUID templateId) {
+        templateService.deleteTemplate(templateId, userContext.getUserId());
+    }
+
     // --- Items ---
 
     @PostMapping("/{templateId}/items")

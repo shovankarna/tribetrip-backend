@@ -12,12 +12,14 @@ public class DeveloperPromptProvider {
                 Generate a %d-day %s itinerary for a %s group of %d people to %s.
 
                 Constraints:
-                - Start Date: %s
+                - Travel Month: %s
                 - Budget: %s
                 - Pace: %s
                 - Trip Type: %s
 
                 Please provide a day-by-day plan including suggested activities, locations, and approximate timings.
+                Consider the typical weather and seasonal events for the specified month in the destination.
+                IMPORTANT: The output must use relative days (e.g., "Day 1", "Day 2") and NOT specific calendar dates.
                 Ensure the activities match the %s pace and %s budget.
                 """,
                 request.getDurationDays(),
@@ -25,7 +27,7 @@ public class DeveloperPromptProvider {
                 request.getGroupType(),
                 request.getNumberOfPeople(),
                 request.getDestination(),
-                request.getStartDate(),
+                request.getMonth(),
                 request.getBudgetType(),
                 request.getPace(),
                 request.getTripType(),

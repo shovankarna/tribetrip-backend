@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 @RestController
-@RequestMapping("/api/itinerary/ai")
+@RequestMapping("/api/itineraries/ai")
 @RequiredArgsConstructor
 @Slf4j
 public class AiItineraryController {

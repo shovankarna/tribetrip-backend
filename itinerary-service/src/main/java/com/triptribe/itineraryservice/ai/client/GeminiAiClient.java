@@ -1,56 +1,55 @@
 package com.triptribe.itineraryservice.ai.client;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.genai.Client;
+import com.google.genai.types.GenerateContentResponse;
 import com.triptribe.itineraryservice.ai.dto.AiItineraryResponse;
-import lombok.Data;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestClient;
-
-import java.util.Collections;
-import java.util.List;
 
 @Component
 @Slf4j
 @RequiredArgsConstructor
 public class GeminiAiClient implements AiModelClient {
 
-    @Qualifier("geminiRestClient")
-    private final RestClient restClient;
-
     @Value("${gemini.api.key}")
     private String apiKey;
 
+    @Value("${gemini.api.model:gemini-1.5-flash}")
+    private String modelName;
+
     private final ObjectMapper objectMapper;
+    private Client client;
+
+    @PostConstruct
+    public void init() {
+        // Initialize the SDK Client with the API key
+        this.client = Client.builder().apiKey(apiKey).build();
+    }
 
     @Override
     public AiItineraryResponse generateItinerary(String systemPrompt, String developerPrompt) {
         try {
-            GeminiRequest request = new GeminiRequest(
-                    List.of(
-                            new Content("user", List.of(new TextPart(systemPrompt + "\n\n" + developerPrompt)))));
+            log.info("Sending request to Gemini API via SDK. Model: {}", modelName);
 
-            log.info("Sending request to Gemini API");
+            String combinedPrompt = systemPrompt + "\n\n" + developerPrompt;
 
-            GeminiResponse response = restClient.post()
-                    .uri(uriBuilder -> uriBuilder.queryParam("key", apiKey).build())
-                    .body(request)
-                    .retrieve()
-                    .body(GeminiResponse.class);
+            GenerateContentResponse response = client.models.generateContent(
+                    modelName,
+                    combinedPrompt,
+                    null);
 
-            if (response == null || response.getCandidates() == null || response.getCandidates().isEmpty()) {
-                throw new RuntimeException("Empty response from Gemini API");
+            if (response == null || response.text() == null) {
+                throw new RuntimeException("Empty response from Gemini SDK");
             }
 
-            String jsonText = response.getCandidates().get(0).getContent().getParts().get(0).getText();
+            String jsonText = response.text();
 
-            // Cleanup markdown code blocks if present
+            // Cleanup markdown code blocks if present (SDK might return raw markdown)
             if (jsonText.startsWith("```json")) {
                 jsonText = jsonText.substring(7);
             }
@@ -70,39 +69,5 @@ public class GeminiAiClient implements AiModelClient {
             log.error("Gemini API call failed", e);
             throw new RuntimeException("AI generation failed: " + e.getMessage(), e);
         }
-    }
-
-    // internal DTOs for Gemini API
-    @Data
-    @RequiredArgsConstructor
-    private static class GeminiRequest {
-        @JsonProperty("contents")
-        private final List<Content> contents;
-    }
-
-    @Data
-    @RequiredArgsConstructor
-    private static class Content {
-        @JsonProperty("role")
-        private final String role;
-        @JsonProperty("parts")
-        private final List<TextPart> parts;
-    }
-
-    @Data
-    @RequiredArgsConstructor
-    private static class TextPart {
-        @JsonProperty("text")
-        private final String text;
-    }
-
-    @Data
-    private static class GeminiResponse {
-        private List<Candidate> candidates;
-    }
-
-    @Data
-    private static class Candidate {
-        private Content content;
     }
 }

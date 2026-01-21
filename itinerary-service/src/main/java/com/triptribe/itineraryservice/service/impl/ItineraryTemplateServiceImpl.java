@@ -163,6 +163,13 @@ public class ItineraryTemplateServiceImpl implements ItineraryTemplateService {
     }
 
     @Override
+    @Transactional
+    public void deleteTemplate(UUID templateId, String userId) {
+        ItineraryTemplate template = validateOwner(templateId, userId);
+        templateRepository.delete(template);
+    }
+
+    @Override
     public void validateTemplateForAttach(UUID templateId) {
         ItineraryTemplate template = templateRepository.findById(templateId)
                 .orElseThrow(() -> new ResourceNotFoundException("Template not found"));

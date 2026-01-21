@@ -6,8 +6,6 @@ import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 
-import java.time.LocalDate;
-
 @Data
 @Builder
 @NoArgsConstructor
@@ -17,9 +15,8 @@ public class AiItineraryRequest {
     @NotBlank(message = "Destination is required")
     private String destination;
 
-    @NotNull(message = "Start date is required")
-    @FutureOrPresent(message = "Start date must be in the present or future")
-    private LocalDate startDate;
+    @NotBlank(message = "Month is required")
+    private String month;
 
     @Min(value = 1, message = "Duration must be at least 1 day")
     @Max(value = 30, message = "Duration cannot exceed 30 days")
