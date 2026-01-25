@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.genai.Client;
 import com.google.genai.types.GenerateContentResponse;
 import com.triptribe.itineraryservice.ai.dto.AiItineraryResponse;
+import com.triptribe.itineraryservice.exception.AiServiceException;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -64,10 +65,10 @@ public class GeminiAiClient implements AiModelClient {
 
         } catch (JsonProcessingException e) {
             log.error("Failed to parse AI response", e);
-            throw new RuntimeException("Invalid JSON received from AI", e);
+            throw new AiServiceException("Invalid JSON received from AI", e);
         } catch (Exception e) {
             log.error("Gemini API call failed", e);
-            throw new RuntimeException("AI generation failed: " + e.getMessage(), e);
+            throw new AiServiceException("AI generation failed: " + e.getMessage(), e);
         }
     }
 }
