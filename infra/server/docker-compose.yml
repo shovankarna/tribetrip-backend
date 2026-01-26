@@ -1,0 +1,83 @@
+services:
+
+  postgres:
+    image: postgres:15
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - trip_pg_data:/var/lib/postgresql/data
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - trip-network
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0.2
+    restart: unless-stopped
+    command: start-dev --import-realm
+    env_file: .env
+    depends_on:
+      - postgres
+    networks:
+      - trip-network
+
+  user-service:
+    image: ghcr.io/shovankarna/tribetrip-backend/user-service:latest
+    env_file: .env
+    depends_on:
+      - postgres
+      - keycloak
+    networks:
+      - trip-network
+
+  trip-service:
+    image: ghcr.io/shovankarna/tribetrip-backend/trip-service:latest
+    env_file: .env
+    depends_on:
+      - postgres
+      - keycloak
+    networks:
+      - trip-network
+
+  itinerary-service:
+    image: ghcr.io/shovankarna/tribetrip-backend/itinerary-service:latest
+    env_file: .env
+    depends_on:
+      - postgres
+      - keycloak
+    networks:
+      - trip-network
+
+  expense-service:
+    image: ghcr.io/shovankarna/tribetrip-backend/expense-service:latest
+    container_name: trip_expense_service
+    restart: unless-stopped
+    environment:
+      SPRING_DATASOURCE_URL: ${EXPENSE_DB_URL}
+      SPRING_DATASOURCE_USERNAME: ${EXPENSE_DB_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${EXPENSE_DB_PASSWORD}
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+    depends_on:
+      - postgres
+      - keycloak
+    networks:
+      - trip-network
+
+  nginx:
+    image: ghcr.io/shovankarna/tribetrip-frontend/web:latest
+    ports:
+      - "80:80"
+    depends_on:
+      - user-service
+      - trip-service
+      - itinerary-service
+      - expense-service
+      - keycloak
+    networks:
+      - trip-network
+
+volumes:
+  trip_pg_data:
+
+networks:
+  trip-network:
+    driver: bridge
